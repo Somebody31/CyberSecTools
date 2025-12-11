@@ -15,8 +15,6 @@ class SpamDatabaseModel {
     ];
     private $cache_file = __DIR__ . '/../logs/spam_cache.json';
     private $cache_expiry = 1800;
-    private $timeout = 0.05;
-    private $max_concurrent = 10;
     
     public function __construct($mysqli) {
         $this->mysqli = $mysqli;
@@ -75,76 +73,8 @@ class SpamDatabaseModel {
     }
 
     private function checkDnsblsParallel($reversedIp) {
-        if (!function_exists('curl_multi_init')) {
-            return $this->checkDnsblsSequential($reversedIp);
-        }
-        
-        $results = [];
-        $multiHandle = curl_multi_init();
-        $handles = [];
-        
-        foreach ($this->dnsbls as $dnsbl) {
-            $lookup = $reversedIp . '.' . $dnsbl;
-            $ch = curl_init();
-            curl_setopt_array($ch, [
-                CURLOPT_URL => "http://" . $lookup,
-                CURLOPT_TIMEOUT => $this->timeout,
-                CURLOPT_CONNECTTIMEOUT => $this->timeout,
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_FOLLOWLOCATION => false,
-                CURLOPT_NOBODY => true,
-                CURLOPT_DNS_USE_GLOBAL_CACHE => false,
-                CURLOPT_DNS_CACHE_TIMEOUT => 0,
-                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-                CURLOPT_USERAGENT => 'SpamDatabaseChecker/3.0',
-                CURLOPT_SSL_VERIFYPEER => false,
-                CURLOPT_SSL_VERIFYHOST => false,
-                CURLOPT_FRESH_CONNECT => true,
-                CURLOPT_FORBID_REUSE => true
-            ]);
-            
-            $handles[$dnsbl] = $ch;
-            curl_multi_add_handle($multiHandle, $ch);
-        }
-        
-        $active = null;
-        do {
-            $mrc = curl_multi_exec($multiHandle, $active);
-        } while ($mrc == CURLM_CALL_MULTI_PERFORM);
-        
-        while ($active && $mrc == CURLM_OK) {
-            if (curl_multi_select($multiHandle) != -1) {
-                do {
-                    $mrc = curl_multi_exec($multiHandle, $active);
-                } while ($mrc == CURLM_CALL_MULTI_PERFORM);
-            }
-        }
-        
-        foreach ($this->dnsbls as $dnsbl) {
-            if (isset($handles[$dnsbl])) {
-                $ch = $handles[$dnsbl];
-                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                $error = curl_error($ch);
-                $response_time = curl_getinfo($ch, CURLINFO_TOTAL_TIME) * 1000;
-                $listed = ($httpCode == 200 || $httpCode == 127 || $httpCode == 302) && empty($error);
-                
-                $results[] = [
-                    'dnsbl' => $dnsbl,
-                    'listed' => $listed,
-                    'status' => $listed ? 'Listed' : 'Clean',
-                    'txt_record' => null,
-                    'response_time' => round($response_time, 2),
-                    'http_code' => $httpCode
-                ];
-                
-                curl_multi_remove_handle($multiHandle, $ch);
-                curl_close($ch);
-                unset($handles[$dnsbl]);
-            }
-        }
-        
-        curl_multi_close($multiHandle);
-        return $results;
+        // Use native DNS resolution for accurate DNSBL checks.
+        return $this->checkDnsblsSequential($reversedIp);
     }
     
     private function checkDnsblsSequential($reversedIp) {
@@ -166,12 +96,20 @@ class SpamDatabaseModel {
             $end_time = microtime(true);
             $response_time = round(($end_time - $start_time) * 1000, 2);
             $listed = ($result !== $lookup);
-            
+
+            $txt_record = null;
+            if ($listed) {
+                $txt = @dns_get_record($lookup, DNS_TXT);
+                if ($txt && isset($txt[0]['txt'])) {
+                    $txt_record = $txt[0]['txt'];
+                }
+            }
+
             return [
                 'dnsbl' => $dnsbl,
                 'listed' => $listed,
                 'status' => $listed ? 'Listed' : 'Clean',
-                'txt_record' => null,
+                'txt_record' => $txt_record,
                 'response_time' => $response_time
             ];
         } catch (Exception $e) {

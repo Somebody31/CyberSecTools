@@ -294,8 +294,11 @@
           lastQuery = domain;
           try {
             const resp = await fetch(
-              "backend.php?domain=" + encodeURIComponent(domain)
+              "../whois-lookup/backend.php?domain=" + encodeURIComponent(domain)
             );
+            if (!resp.ok) {
+              throw new Error(`HTTP error! status: ${resp.status}`);
+            }
             const data = await resp.json();
             loadingDiv.style.display = "none";
             if (data && (data.raw || data.formatted)) {
@@ -311,7 +314,7 @@
             }
           } catch (err) {
             loadingDiv.style.display = "none";
-            showError("An error occurred while fetching WHOIS data.");
+            showError("An error occurred while fetching WHOIS data: " + err.message);
           }
           lookupBtn.disabled = false;
         });
@@ -350,13 +353,27 @@
         }
       })();
 
-      ["header", "footer"].forEach((id) => {
-        fetch(`../${id}.html`)
-          .then((r) => r.text())
-          .then((html) => {
-            document.getElementById(`${id}-include`).innerHTML = html;
-          });
-      });
+      // Load header and footer with error handling
+      function loadHeaderFooter() {
+        ["header", "footer"].forEach((id) => {
+          fetch(`../${id}.html`)
+            .then((r) => {
+              if (!r.ok) {
+                throw new Error(`HTTP error! status: ${r.status}`);
+              }
+              return r.text();
+            })
+            .then((html) => {
+              document.getElementById(`${id}-include`).innerHTML = html;
+            })
+            .catch((error) => {
+              console.error(`Failed to load ${id}.html:`, error);
+            });
+        });
+      }
+
+      // Initialize header/footer loading
+      loadHeaderFooter();
     </script>
   </body>
 </html>

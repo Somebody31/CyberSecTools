@@ -404,9 +404,9 @@
             data.response.domains.slice(0, 100).forEach((domain) => {
               const tr = document.createElement("tr");
               tr.innerHTML = `
-                <td>${domain}</td>
-                <td>2023-01-15</td>
-                <td>GoDaddy.com, LLC</td>
+                <td>${domain.domain || ""}</td>
+                <td>${domain.creation_date || ""}</td>
+                <td>${domain.registrar || ""}</td>
               `;
               table.appendChild(tr);
             });

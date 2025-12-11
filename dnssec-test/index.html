@@ -212,6 +212,8 @@
           e.preventDefault();
           switchTab("json");
         };
+        let originalData = null;
+        
         form.onsubmit = async (e) => {
           e.preventDefault();
           const query = input.value.trim();
@@ -220,16 +222,27 @@
           loadingDiv.style.display = "block";
           try {
             const resp = await fetch(
-              "backend.php?domain=" + encodeURIComponent(query)
+              "../dnssec-test/backend.php?domain=" + encodeURIComponent(query)
             );
+            if (!resp.ok) {
+              throw new Error(`HTTP error! status: ${resp.status}`);
+            }
             const data = await resp.json();
+            originalData = data; // Store original data for JSON tab
             lastQuery = query;
-            lastDnssec = data;
-            renderResults(query, data);
+            // Extract tests from the response structure and convert to array
+            const testsArray = data.response && data.response.tests ?
+              Object.entries(data.response.tests).map(([testName, testDetails]) => ({
+                test: testName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+                status: testDetails.status,
+                details: testDetails.message + (testDetails.details ? ` - ${testDetails.details}` : '')
+              })) : [];
+            lastDnssec = testsArray;
+            renderResults(query, testsArray);
             loadingDiv.style.display = "none";
           } catch (err) {
             loadingDiv.style.display = "none";
-            errorMsg.textContent = "An error occurred while fetching results.";
+            errorMsg.textContent = "An error occurred while fetching results: " + err.message;
             errorMsg.style.display = "block";
           }
         };
@@ -244,23 +257,26 @@
           )}</b>`;
           resultsContent.appendChild(header);
           if (currentTab === "json") {
-            const json = {
-              query: { tool: "dnssec-test", domain: query },
-              response: dnssec,
-            };
-            const pre = document.createElement("pre");
-            pre.textContent = JSON.stringify(json, null, 2);
-            pre.style.background = "#f3f4f6";
-            pre.style.padding = "16px";
-            pre.style.borderRadius = "8px";
-            pre.style.overflow = "auto";
-            pre.style.maxHeight = "420px";
-            pre.style.fontSize = "1rem";
-            pre.style.boxShadow = "none";
-            pre.style.margin = "0";
-            resultsContent.appendChild(pre);
-            if (Array.isArray(dnssec) && dnssec.length > 0) {
-              tabs.style.display = "";
+            // For JSON tab, we want to show the original data structure
+            if (originalData) {
+              const json = {
+                query: { tool: "dnssec-test", domain: query },
+                response: originalData.response,
+              };
+              const pre = document.createElement("pre");
+              pre.textContent = JSON.stringify(json, null, 2);
+              pre.style.background = "#f3f4f6";
+              pre.style.padding = "16px";
+              pre.style.borderRadius = "8px";
+              pre.style.overflow = "auto";
+              pre.style.maxHeight = "420px";
+              pre.style.fontSize = "1rem";
+              pre.style.boxShadow = "none";
+              pre.style.margin = "0";
+              resultsContent.appendChild(pre);
+              if (Array.isArray(dnssec) && dnssec.length > 0) {
+                tabs.style.display = "";
+              }
             }
           } else {
             const table = document.createElement("table");
@@ -288,13 +304,27 @@
         renderResults("", []);
       })();
 
-      ["header", "footer"].forEach((id) => {
-        fetch(`../${id}.html`)
-          .then((r) => r.text())
-          .then((html) => {
-            document.getElementById(`${id}-include`).innerHTML = html;
-          });
-      });
+      // Load header and footer with error handling
+      function loadHeaderFooter() {
+        ["header", "footer"].forEach((id) => {
+          fetch(`../${id}.html`)
+            .then((r) => {
+              if (!r.ok) {
+                throw new Error(`HTTP error! status: ${r.status}`);
+              }
+              return r.text();
+            })
+            .then((html) => {
+              document.getElementById(`${id}-include`).innerHTML = html;
+            })
+            .catch((error) => {
+              console.error(`Failed to load ${id}.html:`, error);
+            });
+        });
+      }
+
+      // Initialize header/footer loading
+      loadHeaderFooter();
     </script>
   </body>
 </html>

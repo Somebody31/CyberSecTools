@@ -1,67 +1,52 @@
 <?php
 require_once __DIR__ . '/../models/ReverseMxModel.php';
+
 class ReverseMxController {
     private $model;
+    
     public function __construct($mysqli) {
         $this->model = new ReverseMxModel($mysqli);
     }
-    public function handleRequest($mx) {
-        if (empty($mx)) {
+    
+    public function handleRequest($mxHost) {
+        if (empty($mxHost)) {
             return [
-                'query' => ['tool' => 'reverse-mx-lookup', 'mailserver' => $mx],
-                'response' => [
-                    'domain_count' => 0,
-                    'domains' => [],
-                    'mx_domain' => $mx,
-                    'error' => 'Please provide a valid mail server domain.'
-                ]
+                'query' => ['tool' => 'reverse-mx-lookup', 'mailserver' => ''],
+                'response' => ['error' => 'MX host is required.']
             ];
         }
         
-        $mx = strtolower(trim($mx));
-        
-        if (!preg_match('/^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$/', $mx)) {
+        $result = $this->model->reverseLookup($mxHost);
+        if (isset($result['error'])) {
             return [
-                'query' => ['tool' => 'reverse-mx-lookup', 'mailserver' => $mx],
-                'response' => [
-                    'domain_count' => 0,
-                    'domains' => [],
-                    'mx_domain' => $mx,
-                    'error' => 'Invalid domain format. Please enter a valid mail server domain.'
-                ]
+                'query' => ['tool' => 'reverse-mx-lookup', 'mailserver' => $mxHost],
+                'response' => ['error' => $result['error']]
             ];
         }
-        
-        $mxHosts = [];
-        if (getmxrr($mx, $hosts)) {
-            foreach ($hosts as $host) {
-                $mxHosts[] = strtolower(rtrim($host, '.'));
+
+        $domains = isset($result['domains']) ? $result['domains'] : [];
+        $flatDomains = [];
+        foreach ($domains as $item) {
+            if (is_array($item)) {
+                if (isset($item['domain'])) {
+                    $flatDomains[] = $item['domain'];
+                } elseif (isset($item['domain_name'])) {
+                    $flatDomains[] = $item['domain_name'];
+                } elseif (isset($item[0])) {
+                    $flatDomains[] = (string)$item[0];
+                }
+            } elseif (is_string($item)) {
+                $flatDomains[] = $item;
             }
         }
-        
-        if (empty($mxHosts)) {
-            $mxHosts[] = $mx;
-        }
-        
-        $domains = $this->model->getDomainsByMx($mxHosts);
-        
+
         return [
-            'query' => ['tool' => 'reverse-mx-lookup', 'mailserver' => $mx],
+            'query' => ['tool' => 'reverse-mx-lookup', 'mailserver' => $mxHost],
             'response' => [
-                'domain_count' => count($domains),
-                'domains' => $domains,
-                'mx_domain' => $mx,
-                'error' => count($domains) > 0 ? '' : 'No domains found using this mail server.'
+                'mx_domain' => $mxHost,
+                'domains' => $flatDomains,
+                'count' => count($flatDomains)
             ]
         ];
-    }
-    public function addDomain($domain, $mx_record) {
-        return $this->model->addDomain($domain, $mx_record);
-    }
-    public function updateDomain($domain, $mx_record) {
-        return $this->model->updateDomain($domain, $mx_record);
-    }
-    public function deleteDomain($domain) {
-        return $this->model->deleteDomain($domain);
     }
 }

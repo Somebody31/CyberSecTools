@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Header/Footer Test</title>
+</head>
+<body>
+    <div id="header-include"></div>
+    <div style="padding: 20px;">
+        <h1>Header/Footer Test Page</h1>
+        <p>This page tests if header and footer are loading correctly.</p>
+    </div>
+    <div id="footer-include"></div>
+    
+    <script>
+        ["header", "footer"].forEach((id) => {
+            fetch(`./${id}.html`)
+                .then((r) => r.text())
+                .then((html) => {
+                    document.getElementById(`${id}-include`).innerHTML = html;
+                })
+                .catch((error) => {
+                    console.error(`Failed to load ${id}.html:`, error);
+                    document.getElementById(`${id}-include`).innerHTML = 
+                        `<div style="background: #fee; padding: 10px; color: red;">
+                            Failed to load ${id}.html
+                        </div>`;
+                });
+        });
+    </script>
+</body>
+</html>

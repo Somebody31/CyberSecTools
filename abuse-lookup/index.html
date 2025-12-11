@@ -175,15 +175,25 @@
           e.preventDefault();
           const query = input.value.trim();
           if (!query) return;
-          const resp = await fetch(
-            `/abuse-lookup/backend.php?query=${encodeURIComponent(query)}`
-          );
-          const abuse = await resp.json();
-          lastQuery = query;
-          lastAbuse = abuse;
-          tabs.style.display = "flex";
-          resultsDiv.style.display = "block";
-          renderResults(query, abuse);
+          try {
+            const resp = await fetch(
+              `../abuse-lookup/backend.php?query=${encodeURIComponent(query)}`
+            );
+            if (!resp.ok) {
+              throw new Error(`HTTP error! status: ${resp.status}`);
+            }
+            const data = await resp.json();
+            const abuse = data.response;
+            lastQuery = query;
+            lastAbuse = abuse;
+            tabs.style.display = "flex";
+            resultsDiv.style.display = "block";
+            renderResults(query, abuse);
+          } catch (error) {
+            resultsDiv.innerHTML = `<p style="text-align: center; color: #e74c3c;">Error fetching abuse information: ${error.message}</p>`;
+            resultsDiv.style.display = "block";
+            tabs.style.display = "flex";
+          }
         };
         function renderResults(query, abuse) {
           resultsDiv.innerHTML = "";
@@ -211,35 +221,158 @@
             pre.style.margin = "0";
             resultsDiv.appendChild(pre);
           } else {
-            const table = document.createElement("table");
-            table.innerHTML =
-              "<thead><tr><th>Contact Type</th><th>Email</th><th>Organization</th><th>Details</th></tr></thead>";
-            const tbody = document.createElement("tbody");
-            if (Array.isArray(abuse)) {
-              abuse.forEach((row) => {
-                const tr = document.createElement("tr");
-                ["type", "email", "org", "details"].forEach((key) => {
-                  const td = document.createElement("td");
-                  td.textContent = row[key] || "";
-                  tr.appendChild(td);
+            if (abuse.error) {
+              const errorDiv = document.createElement("div");
+              errorDiv.innerHTML = `<div style="color: #dc2626; padding: 12px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; margin: 8px 0;">❌ ${escapeHtml(
+                abuse.error
+              )}</div>`;
+              resultsDiv.appendChild(errorDiv);
+            } else {
+              // Display summary
+              if (abuse.summary && Array.isArray(abuse.summary)) {
+                const summaryDiv = document.createElement("div");
+                summaryDiv.style.padding = "16px";
+                summaryDiv.style.background = "#f9fafb";
+                summaryDiv.style.border = "1px solid #e5e7eb";
+                summaryDiv.style.borderRadius = "8px";
+                summaryDiv.style.margin = "8px 0";
+                summaryDiv.innerHTML =
+                  "<h3 style='margin: 0 0 12px 0; color: #374151;'>Summary</h3>";
+
+                abuse.summary.forEach((item) => {
+                  const itemDiv = document.createElement("div");
+                  itemDiv.style.margin = "4px 0";
+                  itemDiv.style.color = "#6b7280";
+                  itemDiv.textContent = item;
+                  summaryDiv.appendChild(itemDiv);
                 });
-                tbody.appendChild(tr);
-              });
+                resultsDiv.appendChild(summaryDiv);
+              }
+
+              // Display contact information
+              const contactsDiv = document.createElement("div");
+              contactsDiv.style.marginTop = "16px";
+              contactsDiv.innerHTML =
+                "<h3 style='margin: 0 0 12px 0; color: #374151;'>Contact Information</h3>";
+
+              if (abuse.whois_abuse) {
+                const contactDiv = document.createElement("div");
+                contactDiv.style.padding = "12px";
+                contactDiv.style.background = "#ecfdf5";
+                contactDiv.style.border = "1px solid #a7f3d0";
+                contactDiv.style.borderRadius = "6px";
+                contactDiv.style.margin = "8px 0";
+                contactDiv.innerHTML = `
+                  <div style="font-weight: 600; color: #059669; margin-bottom: 4px;">WHOIS Abuse Contact</div>
+                  <div style="color: #065f46;">${escapeHtml(
+                    abuse.whois_abuse
+                  )}</div>
+                `;
+                contactsDiv.appendChild(contactDiv);
+              }
+
+              if (abuse.abuse_net) {
+                const contactDiv = document.createElement("div");
+                contactDiv.style.padding = "12px";
+                contactDiv.style.background = "#eff6ff";
+                contactDiv.style.border = "1px solid #93c5fd";
+                contactDiv.style.borderRadius = "6px";
+                contactDiv.style.margin = "8px 0";
+                contactDiv.innerHTML = `
+                  <div style="font-weight: 600; color: #1d4ed8; margin-bottom: 4px;">Abuse.net Contact</div>
+                  <div style="color: #1e40af;">${escapeHtml(
+                    abuse.abuse_net
+                  )}</div>
+                `;
+                contactsDiv.appendChild(contactDiv);
+              }
+
+              if (abuse.registrar) {
+                const infoDiv = document.createElement("div");
+                infoDiv.style.padding = "8px 0";
+                infoDiv.style.borderBottom = "1px solid #e5e7eb";
+                infoDiv.innerHTML = `
+                  <strong style="color: #374151;">Registrar:</strong> 
+                  <span style="color: #6b7280;">${escapeHtml(
+                    abuse.registrar
+                  )}</span>
+                `;
+                contactsDiv.appendChild(infoDiv);
+              }
+
+              if (abuse.organization) {
+                const infoDiv = document.createElement("div");
+                infoDiv.style.padding = "8px 0";
+                infoDiv.style.borderBottom = "1px solid #e5e7eb";
+                infoDiv.innerHTML = `
+                  <strong style="color: #374151;">Organization:</strong> 
+                  <span style="color: #6b7280;">${escapeHtml(
+                    abuse.organization
+                  )}</span>
+                `;
+                contactsDiv.appendChild(infoDiv);
+              }
+
+              if (abuse.network) {
+                const infoDiv = document.createElement("div");
+                infoDiv.style.padding = "8px 0";
+                infoDiv.style.borderBottom = "1px solid #e5e7eb";
+                infoDiv.innerHTML = `
+                  <strong style="color: #374151;">Network:</strong> 
+                  <span style="color: #6b7280;">${escapeHtml(
+                    abuse.network
+                  )}</span>
+                `;
+                contactsDiv.appendChild(infoDiv);
+              }
+
+              if (
+                !abuse.whois_abuse &&
+                !abuse.abuse_net &&
+                !abuse.registrar &&
+                !abuse.organization &&
+                !abuse.network
+              ) {
+                const noDataDiv = document.createElement("div");
+                noDataDiv.style.padding = "12px";
+                noDataDiv.style.background = "#fef3c7";
+                noDataDiv.style.border = "1px solid #fcd34d";
+                noDataDiv.style.borderRadius = "6px";
+                noDataDiv.style.margin = "8px 0";
+                noDataDiv.innerHTML = `
+                  <div style="color: #92400e;">⚠️ No abuse contact information found for this query.</div>
+                `;
+                contactsDiv.appendChild(noDataDiv);
+              }
+
+              resultsDiv.appendChild(contactsDiv);
             }
-            table.appendChild(tbody);
-            resultsDiv.appendChild(table);
           }
         }
         renderResults("", []);
       })();
 
-      ["header", "footer"].forEach((id) => {
-        fetch(`../${id}.html`)
-          .then((r) => r.text())
-          .then((html) => {
-            document.getElementById(`${id}-include`).innerHTML = html;
-          });
-      });
+      // Load header and footer with error handling
+      function loadHeaderFooter() {
+        ["header", "footer"].forEach((id) => {
+          fetch(`../${id}.html`)
+            .then((r) => {
+              if (!r.ok) {
+                throw new Error(`HTTP error! status: ${r.status}`);
+              }
+              return r.text();
+            })
+            .then((html) => {
+              document.getElementById(`${id}-include`).innerHTML = html;
+            })
+            .catch((error) => {
+              console.error(`Failed to load ${id}.html:`, error);
+            });
+        });
+      }
+
+      // Initialize header/footer loading
+      loadHeaderFooter();
     </script>
   </body>
 </html>

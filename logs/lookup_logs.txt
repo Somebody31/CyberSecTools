@@ -1,0 +1,25 @@
+[2025-08-02 12:14:14] TRACEROUTE: 8.8.8.8 | ::1 | GET | Mozilla/5.0 (Windows NT; Windows NT 10.0; en-US) WindowsPowerShell/5.1.26100.4652 | SUCCESS -> Query completed successfully
+[2025-08-02 14:22:39] TRACEROUTE: 8.8.8.8 | ::1 | GET | Mozilla/5.0 (Windows NT; Windows NT 10.0; en-US) WindowsPowerShell/5.1.26100.4652 | SUCCESS -> Query completed successfully
+[2025-08-02 14:38:26] TRACEROUTE: 1.0.0.1 | ::1 | GET | Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0 | SUCCESS -> Query completed successfully
+[2025-08-02 14:42:18] TRACEROUTE: 8.8.8.8 | ::1 | GET | Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0 | SUCCESS -> Query completed successfully
+[2025-08-02 14:42:44] TRACEROUTE: 1.0.0.1 | ::1 | GET | Mozilla/5.0 (Windows NT; Windows NT 10.0; en-US) WindowsPowerShell/5.1.26100.4652 | SUCCESS -> Query completed successfully
+[2025-08-02 14:45:22] TRACEROUTE: 1.0.0.1 | ::1 | GET | Mozilla/5.0 (Windows NT; Windows NT 10.0; en-US) WindowsPowerShell/5.1.26100.4652 | SUCCESS -> Query completed successfully
+[2025-08-02 14:45:55] TRACEROUTE: 8.8.4.4 | ::1 | GET | Mozilla/5.0 (Windows NT; Windows NT 10.0; en-US) WindowsPowerShell/5.1.26100.4652 | SUCCESS -> Query completed successfully
+[2025-08-02 14:51:50] TRACEROUTE: google.com | ::1 | GET | Mozilla/5.0 (Windows NT; Windows NT 10.0; en-US) WindowsPowerShell/5.1.26100.4652 | SUCCESS -> Query completed successfully
+[2025-08-02 14:54:04] TRACEROUTE: 1.0.0.1 | ::1 | GET | Mozilla/5.0 (Windows NT; Windows NT 10.0; en-US) WindowsPowerShell/5.1.26100.4652 | SUCCESS -> Query completed successfully
+[2025-08-02 14:54:32] TRACEROUTE: 1.0.0.1 | ::1 | GET | Mozilla/5.0 (Windows NT; Windows NT 10.0; en-US) WindowsPowerShell/5.1.26100.4652 | SUCCESS -> Query completed successfully
+[2025-08-02 14:55:05] TRACEROUTE: 8.8.8.8 | ::1 | GET | Mozilla/5.0 (Windows NT; Windows NT 10.0; en-US) WindowsPowerShell/5.1.26100.4652 | SUCCESS -> Query completed successfully
+[2025-08-02 15:02:23] TRACEROUTE: 8.8.8.8 | ::1 | GET | Mozilla/5.0 (Windows NT; Windows NT 10.0; en-US) WindowsPowerShell/5.1.26100.4652 | SUCCESS -> Query completed successfully
+[2025-08-02 15:08:23] TRACEROUTE: 8.8.8.8 | ::1 | GET | Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0 | SUCCESS -> Query completed successfully
+[2025-08-02 15:10:58] TRACEROUTE: 8.8.8.8 | ::1 | GET | Mozilla/5.0 (Windows NT; Windows NT 10.0; en-US) WindowsPowerShell/5.1.26100.4652 | SUCCESS -> Query completed successfully
+[2025-08-02 15:12:08] TRACEROUTE: 8.8.8.8 | ::1 | GET | Mozilla/5.0 (Windows NT; Windows NT 10.0; en-US) WindowsPowerShell/5.1.26100.4652 | SUCCESS -> Query completed successfully
+[2025-08-02 15:17:10] TRACEROUTE: 1.1.1.1 | ::1 | GET | Mozilla/5.0 (Windows NT; Windows NT 10.0; en-US) WindowsPowerShell/5.1.26100.4652 | SUCCESS -> Query completed successfully
+[2025-08-02 15:18:19] TRACEROUTE: 8.8.8.8 | ::1 | GET | Mozilla/5.0 (Windows NT; Windows NT 10.0; en-US) WindowsPowerShell/5.1.26100.4652 | SUCCESS -> Query completed successfully
+[2025-08-02 15:48:46] TRACEROUTE: 8.8.8.8 | ::1 | GET | Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0 | SUCCESS -> Query completed successfully
+[2025-08-02 16:01:42] TRACEROUTE: 8.8.8.8 | ::1 | GET | Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0 | SUCCESS -> Query completed successfully
+[2025-08-26 12:01:37] ABUSE-LOOKUP:  | Unknown | Unknown | Unknown | ERROR -> Query parameter is required.
+[2025-08-26 12:01:37] DNS-LOOKUP: google.com (A) | Unknown | Unknown | Unknown | SUCCESS -> Query completed successfully
+[2025-08-26 12:01:37] DNS-PROPAGATION: google.com | Unknown | Unknown | Unknown | SUCCESS -> Query completed successfully
+[2025-08-26 12:01:59] ABUSE-LOOKUP:  | Unknown | Unknown | Unknown | ERROR -> Query parameter is required.
+[2025-08-26 12:01:59] DNS-LOOKUP: google.com (A) | Unknown | Unknown | Unknown | SUCCESS -> Query completed successfully
+[2025-08-26 12:01:59] DNS-PROPAGATION: google.com | Unknown | Unknown | Unknown | SUCCESS -> Query completed successfully

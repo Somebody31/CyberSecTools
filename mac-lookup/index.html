@@ -198,7 +198,8 @@
           const resp = await fetch(
             `/mac-lookup/backend.php?mac=${encodeURIComponent(query)}`
           );
-          const results = await resp.json();
+          const apiResponse = await resp.json();
+          const results = apiResponse.response; // Extract the response data
           lastQuery = query;
           lastResults = results;
           tabs.style.display = "flex";
@@ -214,6 +215,22 @@
             query
           )}</b>`;
           resultsDiv.appendChild(header);
+
+          // Check for errors first
+          if (results.error) {
+            const errorDiv = document.createElement("div");
+            errorDiv.style.color = "#dc2626";
+            errorDiv.style.padding = "16px";
+            errorDiv.style.background = "#fef2f2";
+            errorDiv.style.borderRadius = "8px";
+            errorDiv.style.margin = "16px 0";
+            errorDiv.innerHTML = `<strong>Error:</strong> ${escapeHtml(
+              results.error
+            )}`;
+            resultsDiv.appendChild(errorDiv);
+            return;
+          }
+
           if (currentTab === "json") {
             const json = {
               query: { tool: "mac-lookup", mac: query },

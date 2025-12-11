@@ -1,62 +1,83 @@
 <?php
 class ReverseMxModel {
     private $mysqli;
-    private $cache = [];
     
     public function __construct($mysqli) {
         $this->mysqli = $mysqli;
     }
     
-    public function getDomainsByMx($mxHosts) {
-        if (empty($mxHosts)) return [];
-        
-        $cache_key = md5(serialize($mxHosts));
-        if (isset($this->cache[$cache_key])) {
-            return $this->cache[$cache_key];
+    public function reverseLookup($mxHost) {
+        if (empty($mxHost)) {
+            return ['error' => 'MX host is required.'];
         }
         
-        $conditions = [];
-        $params = [];
-        foreach ($mxHosts as $mx) {
-            $conditions[] = "mx_record LIKE ?";
-            $params[] = "%$mx%";
+        if (!filter_var($mxHost, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME)) {
+            return ['error' => 'Invalid MX host format provided.'];
         }
         
-        $sql = "SELECT domain FROM domains_mx WHERE " . implode(" OR ", $conditions) . " ORDER BY domain";
-        $stmt = $this->mysqli->prepare($sql);
-        $types = str_repeat('s', count($params));
-        $stmt->bind_param($types, ...$params);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $domains = [];
-        while ($row = $result->fetch_assoc()) {
-            $domains[] = $row['domain'];
+        try {
+            $domains = $this->findDomainsByMx($mxHost);
+            
+            return [
+                'mx_host' => $mxHost,
+                'domains' => $domains,
+                'count' => count($domains),
+                'timestamp' => date('Y-m-d H:i:s')
+            ];
+            
+        } catch (Exception $e) {
+            error_log("Reverse MX lookup error: " . $e->getMessage());
+            return ['error' => 'An error occurred while performing reverse MX lookup.'];
         }
-        $stmt->close();
+    }
+    
+    private function findDomainsByMx($mxHost) {
+        if (!$this->mysqli || $this->mysqli->connect_errno) {
+            return [];
+        }
         
-        $this->cache[$cache_key] = $domains;
-        return $domains;
+        try {
+            // Use your existing schema: `domains_mx` with columns (`id`, `domain`, `mx_record`).
+            $like = '%' . $mxHost . '%';
+            // Allow more time for large result sets
+            @set_time_limit(60);
+            $stmt = $this->mysqli->prepare(
+                "SELECT domain, mx_record FROM domains_mx WHERE mx_record LIKE ? ORDER BY domain"
+            );
+            
+            if (!$stmt) {
+                return [];
+            }
+            
+            $stmt->bind_param('s', $like);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            
+            $domains = [];
+            while ($row = $result->fetch_assoc()) {
+                $domains[] = [
+                    'domain' => $row['domain'],
+                    'mx_host' => $mxHost,
+                    'mx_record' => $row['mx_record']
+                ];
+            }
+            
+            $stmt->close();
+            
+            if (empty($domains)) {
+                return [];
+            }
+            
+            return $domains;
+            
+        } catch (Exception $e) {
+            error_log("Database query error: " . $e->getMessage());
+            return [];
+        }
     }
     
-    public function addDomain($domain, $mx_record) {
-        $sql = "INSERT INTO domains_mx (domain, mx_record) VALUES (?, ?) ON DUPLICATE KEY UPDATE mx_record = ?";
-        $stmt = $this->mysqli->prepare($sql);
-        $stmt->bind_param('sss', $domain, $mx_record, $mx_record);
-        return $stmt->execute();
-    }
-    
-    public function updateDomain($domain, $mx_record) {
-        $sql = "UPDATE domains_mx SET mx_record = ? WHERE domain = ?";
-        $stmt = $this->mysqli->prepare($sql);
-        $stmt->bind_param('ss', $mx_record, $domain);
-        return $stmt->execute();
-    }
-    
-    public function deleteDomain($domain) {
-        $sql = "DELETE FROM domains_mx WHERE domain = ?";
-        $stmt = $this->mysqli->prepare($sql);
-        $stmt->bind_param('s', $domain);
-        return $stmt->execute();
-    }
 }
 ?>
+
+
+

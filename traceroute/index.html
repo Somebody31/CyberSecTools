@@ -150,44 +150,68 @@
         const resultsContent = resultsArea.querySelector(".results-content");
         const errorMsg = document.getElementById("error-msg");
         const loadingDiv = document.getElementById("loading");
-        form.addEventListener("submit", async function (e) {
-          e.preventDefault();
-          const host = input.value.trim();
-          if (!host) return;
-          errorMsg.style.display = "none";
-          loadingDiv.style.display = "block";
-          resultsContent.innerHTML = "";
-          try {
-            const resp = await fetch(
-              "backend.php?host=" + encodeURIComponent(host)
-            );
-            const data = await resp.json();
-            loadingDiv.style.display = "none";
-            if (!data.hops || data.hops.length === 0) {
-              resultsContent.innerHTML = "<p>No results found.</p>";
-              return;
+        
+        async function handleSubmit(e) {
+            e.preventDefault();
+            const host = input.value.trim();
+            if (!host) return;
+            
+            errorMsg.style.display = "none";
+            loadingDiv.style.display = "block";
+            resultsContent.innerHTML = "";
+            
+            try {
+                const resp = await fetch(`backend.php?host=${encodeURIComponent(host)}`);
+                const data = await resp.json();
+                loadingDiv.style.display = "none";
+
+                if (data.status === 'error') {
+                    errorMsg.textContent = data.response.error || 'An error occurred';
+                    errorMsg.style.display = "block";
+                    return;
+                }
+
+                if (!data.response.hops || data.response.hops.length === 0) {
+                    resultsContent.innerHTML = "<p>No results found.</p>";
+                    return;
+                }
+
+                const header = document.createElement("div");
+                header.className = "results-header";
+                header.textContent = `Traceroute results for '${data.response.host}':`;
+                resultsContent.appendChild(header);
+
+                const table = document.createElement("table");
+                table.innerHTML = `
+                    <tr>
+                        <th>Hop</th>
+                        <th>IP Address</th>
+                        <th>Hostname</th>
+                        <th>Response Time</th>
+                    </tr>
+                `;
+                
+                data.response.hops.forEach((hop, index) => {
+                    const tr = document.createElement("tr");
+                    tr.innerHTML = `
+                        <td>${index + 1}</td>
+                        <td>${hop.ip}</td>
+                        <td>${hop.hostname}</td>
+                        <td>${hop.time === '*' ? '*' : hop.time + ' ms'}</td>
+                    `;
+                    table.appendChild(tr);
+                });
+                
+                resultsContent.appendChild(table);
+            } catch (err) {
+                loadingDiv.style.display = "none";
+                errorMsg.textContent = "An error occurred while fetching results.";
+                errorMsg.style.display = "block";
+                console.error(err);
             }
-            const header = document.createElement("div");
-            header.className = "results-header";
-            header.textContent = `Traceroute results for '${host}':`;
-            resultsContent.appendChild(header);
-            const table = document.createElement("table");
-            table.innerHTML =
-              "<tr><th>Hop</th><th>IP</th><th>Hostname</th><th>Time (ms)</th></tr>";
-            data.hops.forEach((hop, idx) => {
-              const tr = document.createElement("tr");
-              tr.innerHTML = `<td>${idx + 1}</td><td>${hop.ip || ""}</td><td>${
-                hop.hostname || ""
-              }</td><td>${hop.time || ""}</td>`;
-              table.appendChild(tr);
-            });
-            resultsContent.appendChild(table);
-          } catch (err) {
-            loadingDiv.style.display = "none";
-            errorMsg.textContent = "An error occurred while fetching results.";
-            errorMsg.style.display = "block";
-          }
-        });
+        }
+
+        form.addEventListener("submit", handleSubmit);
 
         ["header", "footer"].forEach((id) => {
           fetch(`../${id}.html`)

@@ -7,20 +7,10 @@ SecurityUtils::setSecurityHeaders();
 require_once __DIR__ . '/../controllers/PortScannerController.php';
 require_once __DIR__ . '/../views/jsonView.php';
 
-$host = isset($_GET['host']) ? trim($_GET['host']) : '';
-
-if (!$host) {
-    $data = ['query' => ['tool' => 'port-scanner', 'host' => ''], 'response' => ['error' => 'Host parameter is required.']];
-    log_lookup($mysqli, 'port-scanner', '', 'Host parameter is required.');
-    renderJson($data);
-    exit;
-}
+$host = isset($_GET['host']) ? SecurityUtils::sanitizeInput(trim($_GET['host']), 'general', 255) : '';
 
 $controller = new PortScannerController($mysqli);
 $data = $controller->handleRequest($host);
-
-$errorMessage = !empty($data['response']['error']) ? $data['response']['error'] : null;
-log_lookup($mysqli, 'port-scanner', $host, $errorMessage);
-
+log_lookup($mysqli, 'port-scanner', $host, !empty($data['response']['error']) ? $data['response']['error'] : null);
 renderJson($data);
 ?> 

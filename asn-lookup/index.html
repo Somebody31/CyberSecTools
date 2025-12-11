@@ -5,27 +5,47 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ASN Lookup</title>
     <style>
-      body {
-        font-family: Segoe UI, Arial, sans-serif;
-        background: #f6f8fa;
+      @import url("https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap");
+      :root {
+        --primary-color: #800000;
+        --secondary-color: #5c0000;
+        --accent-color: #a52a2a;
+        --light-color: #f3f4f6;
+        --dark-color: #2b0000;
+      }
+      * {
         margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "Roboto", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      }
+      body {
+        background-color: #f9fafb;
+        color: var(--dark-color);
+        line-height: 1.6;
+        margin: 0;
+        padding: 20px;
+      }
+      #app {
+        max-width: 1100px;
+        margin: 30px auto;
       }
       .container {
-        max-width: 1150px;
-        margin: 30px auto;
         background: #fff;
         border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-        padding: 32px 32px 24px 32px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        padding: 32px;
       }
       h1 {
         font-size: 2rem;
         font-weight: 600;
         margin-bottom: 8px;
+        color: var(--primary-color);
       }
       .desc {
-        color: #555;
+        color: #4b5563;
         margin-bottom: 24px;
+        line-height: 1.5;
       }
       .search-box {
         display: flex;
@@ -40,8 +60,13 @@
         font-size: 1rem;
         box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
       }
+      .search-box input:focus {
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 3px rgba(165, 42, 42, 0.2);
+        outline: none;
+      }
       .search-box button {
-        background: #7a0000;
+        background: var(--primary-color);
         color: #fff;
         border: none;
         border-radius: 6px;
@@ -52,7 +77,7 @@
         transition: background 0.2s;
       }
       .search-box button:hover {
-        background: #5a0000;
+        background: var(--secondary-color);
       }
       .tabs {
         display: flex;
@@ -63,14 +88,15 @@
       .tab {
         padding: 12px 0;
         font-weight: 500;
-        color: #222;
+        color: #374151;
         cursor: pointer;
         border-bottom: 2px solid transparent;
+        transition: color 0.2s, border-color 0.2s;
         text-decoration: none;
       }
       .tab.active {
-        border-bottom: 2px solid #7a0000;
-        color: #7a0000;
+        color: var(--primary-color);
+        border-bottom-color: var(--primary-color);
       }
       .results-header {
         font-size: 1.2rem;
@@ -86,157 +112,238 @@
       td {
         text-align: left;
         padding: 12px 8px;
-      }
-      th {
-        background: #f3f4f6;
-        color: #444;
-        font-weight: 600;
         border-bottom: 1px solid #e5e7eb;
       }
+      th {
+        background: #f9fafb;
+        color: #374151;
+        font-weight: 600;
+      }
       tr:nth-child(even) {
-        background: #fafbfc;
+        background: #f9fafb;
       }
       tr:hover {
         background: #f1f5f9;
+      }
+
+      /* Loading spinner */
+      .spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid var(--primary-color);
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        animation: spin 1s linear infinite;
+        margin: 20px auto;
+        display: none;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .loading-text {
+        text-align: center;
+        color: #4b5563;
+        font-style: italic;
+        margin-top: 10px;
+        display: none;
+      }
+
+      /* JSON Output */
+      .json-pre {
+        background: #f3f4f6;
+        padding: 16px;
+        border-radius: 8px;
+        overflow-x: auto;
+        max-height: 500px;
+        font-size: 0.9rem;
+        margin-top: 8px;
+      }
+
+      /* Hide tabs and results by default */
+      .tabs-wrapper {
+        display: none;
       }
     </style>
   </head>
   <body>
     <div id="header-include"></div>
-    <div class="container">
-      <h1>ASN Lookup</h1>
-      <div class="desc">
-        Retrieve detailed information about Autonomous System Numbers including
-        IP ranges, routing policies, and organization data.
-      </div>
-      <form class="search-box" autocomplete="off">
-        <input
-          type="text"
-          name="asn"
-          placeholder="Enter ASN (e.g. AS15169)"
-          required
-        />
-        <button type="submit">Lookup</button>
-      </form>
-      <div class="tabs" style="display: none">
-        <a href="#" class="tab active">HTML</a>
-        <a href="#" class="tab">JSON</a>
-      </div>
-      <div class="results" style="display: none"></div>
-    </div>
+    <div id="app"></div>
     <div id="footer-include"></div>
     <script>
-      function escapeHtml(str) {
-        return str.replace(
-          /[&<>"']/g,
-          (t) =>
-            ({
-              "&": "&amp;",
-              "<": "&lt;",
-              ">": "&gt;",
-              '"': "&quot;",
-              "'": "&#39;",
-            }[t] || t)
-        );
+      let currentTab = "html";
+      let lastQuery = "";
+      let lastAsnInfo = {};
+
+      function buildUI(app) {
+        const container = document.createElement("div");
+        container.className = "container";
+
+        container.innerHTML = `
+          <h1>ASN Lookup</h1>
+          <p class="desc">
+            Retrieve detailed information about Autonomous System Numbers including
+            IP ranges, routing policies, and organization data.
+          </p>
+          <form class="search-box" autocomplete="off">
+            <input
+              type="text"
+              name="asn"
+              placeholder="Enter ASN (e.g. AS15169)"
+              required
+            />
+            <button type="submit">Lookup</button>
+          </form>
+          <div class="tabs-wrapper">
+            <div class="tabs">
+              <a class="tab active" data-tab="html">HTML</a>
+              <a class="tab" data-tab="json">JSON</a>
+            </div>
+            <div class="spinner" id="loading-spinner"></div>
+            <div class="loading-text" id="loading-text">Fetching ASN information...</div>
+            <div class="results" id="results"></div>
+          </div>
+        `;
+        app.appendChild(container);
+
+        container
+          .querySelector(".search-box")
+          .addEventListener("submit", handleFormSubmit);
+        container
+          .querySelectorAll(".tab")
+          .forEach((tab) => tab.addEventListener("click", handleTabSwitch));
+
+        return container;
       }
-      (function () {
-        let currentTab = "html",
-          lastQuery = "",
-          lastAsnInfo = {};
-        const form = document.querySelector(".search-box"),
-          input = form.querySelector("input"),
-          tabs = document.querySelector(".tabs"),
-          htmlTab = tabs.querySelectorAll(".tab")[0],
-          jsonTab = tabs.querySelectorAll(".tab")[1],
-          resultsDiv = document.querySelector(".results");
-        function switchTab(tab) {
-          currentTab = tab;
-          htmlTab.className = "tab" + (tab === "html" ? " active" : "");
-          htmlTab.style.borderBottom =
-            tab === "html" ? "2px solid #7a0000" : "2px solid transparent";
-          htmlTab.style.color = tab === "html" ? "#7a0000" : "#222";
-          jsonTab.className = "tab" + (tab === "json" ? " active" : "");
-          jsonTab.style.borderBottom =
-            tab === "json" ? "2px solid #7a0000" : "2px solid transparent";
-          jsonTab.style.color = tab === "json" ? "#7a0000" : "#222";
-          renderResults(lastQuery, lastAsnInfo);
-        }
-        htmlTab.onclick = (e) => {
-          e.preventDefault();
-          switchTab("html");
-        };
-        jsonTab.onclick = (e) => {
-          e.preventDefault();
-          switchTab("json");
-        };
-        form.onsubmit = async (e) => {
-          e.preventDefault();
-          const query = input.value.trim();
-          if (!query) return;
+
+      function escapeHtml(str) {
+        if (!str) return "";
+        var div = document.createElement("div");
+        div.textContent = str;
+        return div.innerHTML;
+      }
+
+      async function handleFormSubmit(e) {
+        e.preventDefault();
+        const form = e.currentTarget;
+        const input = form.querySelector("input");
+        const query = input.value.trim();
+        if (!query) return;
+
+        const tabsWrapper = document.querySelector(".tabs-wrapper");
+        const spinner = document.getElementById("loading-spinner");
+        const loadingText = document.getElementById("loading-text");
+        const resultsDiv = document.getElementById("results");
+
+        tabsWrapper.style.display = "block";
+        spinner.style.display = "block";
+        loadingText.style.display = "block";
+        resultsDiv.style.display = "none";
+
+        try {
           const resp = await fetch(
-            `/asn-lookup/backend.php?asn=${encodeURIComponent(query)}`
+            `../asn-lookup/backend.php?asn=${encodeURIComponent(query)}`
           );
+          if (!resp.ok) {
+            throw new Error(`HTTP error! status: ${resp.status}`);
+          }
           const asnInfo = await resp.json();
           lastQuery = query;
           lastAsnInfo = asnInfo;
-          tabs.style.display = "flex";
           resultsDiv.style.display = "block";
           renderResults(query, asnInfo);
-        };
-        function renderResults(query, asnInfo) {
-          resultsDiv.innerHTML = "";
-          if (!query) return;
-          const header = document.createElement("div");
-          header.className = "results-header";
-          header.innerHTML = `ASN Information for <b>${escapeHtml(query)}</b>`;
-          resultsDiv.appendChild(header);
-          if (currentTab === "json") {
-            const json = {
-              query: { tool: "asn-lookup", asn: query },
-              response: asnInfo,
-            };
-            const pre = document.createElement("pre");
-            pre.textContent = JSON.stringify(json, null, 2);
-            pre.style.background = "#f3f4f6";
-            pre.style.padding = "16px";
-            pre.style.borderRadius = "8px";
-            pre.style.overflow = "auto";
-            pre.style.maxHeight = "420px";
-            pre.style.fontSize = "1rem";
-            pre.style.boxShadow = "none";
-            pre.style.margin = "0";
-            resultsDiv.appendChild(pre);
-          } else {
-            const table = document.createElement("table");
-            table.innerHTML =
-              "<thead><tr><th>Field</th><th>Value</th></tr></thead>";
-            const tbody = document.createElement("tbody");
-            if (asnInfo && typeof asnInfo === "object") {
-              Object.entries(asnInfo).forEach(([field, value]) => {
-                const tr = document.createElement("tr");
-                const tdField = document.createElement("td");
-                tdField.textContent = field;
-                const tdValue = document.createElement("td");
-                tdValue.textContent = value;
-                tr.appendChild(tdField);
-                tr.appendChild(tdValue);
-                tbody.appendChild(tr);
-              });
-            }
-            table.appendChild(tbody);
-            resultsDiv.appendChild(table);
-          }
+        } catch (error) {
+          resultsDiv.innerHTML =
+            '<p style="text-align: center; color: #e74c3c;">Error fetching ASN information: ' + error.message + '</p>';
+          resultsDiv.style.display = "block";
+        } finally {
+          spinner.style.display = "none";
+          loadingText.style.display = "none";
         }
-        renderResults("", {});
-      })();
+      }
 
-      ["header", "footer"].forEach((id) => {
-        fetch(`../${id}.html`)
-          .then((r) => r.text())
-          .then((html) => {
-            document.getElementById(`${id}-include`).innerHTML = html;
-          });
-      });
+      function handleTabSwitch(e) {
+        e.preventDefault();
+        currentTab = e.currentTarget.dataset.tab;
+        document
+          .querySelectorAll(".tab")
+          .forEach((t) => t.classList.remove("active"));
+        e.currentTarget.classList.add("active");
+        renderResults(lastQuery, lastAsnInfo);
+      }
+
+      function renderResults(query, asnInfo) {
+        const resultsDiv = document.getElementById("results");
+        resultsDiv.innerHTML = "";
+        if (!query) return;
+
+        const header = document.createElement("div");
+        header.className = "results-header";
+        header.innerHTML =
+          "ASN Information for <b>" + escapeHtml(query) + "</b>";
+        resultsDiv.appendChild(header);
+
+        if (currentTab === "json") {
+          const json = {
+            query: { tool: "asn-lookup", asn: query },
+            response: asnInfo,
+          };
+          const pre = document.createElement("pre");
+          pre.className = "json-pre";
+          pre.textContent = JSON.stringify(json, null, 2);
+          resultsDiv.appendChild(pre);
+        } else {
+          const table = document.createElement("table");
+          table.innerHTML =
+            "<thead><tr><th>Field</th><th>Value</th></tr></thead>";
+          const tbody = document.createElement("tbody");
+          if (asnInfo && typeof asnInfo === "object") {
+            Object.entries(asnInfo).forEach(([field, value]) => {
+              const tr = document.createElement("tr");
+              const tdField = document.createElement("td");
+              tdField.textContent = field;
+              const tdValue = document.createElement("td");
+              tdValue.textContent = value;
+              tr.appendChild(tdField);
+              tr.appendChild(tdValue);
+              tbody.appendChild(tr);
+            });
+          }
+          table.appendChild(tbody);
+          resultsDiv.appendChild(table);
+        }
+      }
+
+      const app = document.getElementById("app");
+      buildUI(app);
+
+      // Load header and footer with error handling
+      function loadHeaderFooter() {
+        ["header", "footer"].forEach((id) => {
+          fetch(`../${id}.html`)
+            .then((r) => {
+              if (!r.ok) {
+                throw new Error(`HTTP error! status: ${r.status}`);
+              }
+              return r.text();
+            })
+            .then((html) => {
+              document.getElementById(`${id}-include`).innerHTML = html;
+            })
+            .catch((error) => {
+              console.error(`Failed to load ${id}.html:`, error);
+            });
+        });
+      }
+
+      // Initialize header/footer loading
+      loadHeaderFooter();
     </script>
   </body>
 </html>

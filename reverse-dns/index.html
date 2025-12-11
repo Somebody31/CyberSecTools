@@ -150,38 +150,54 @@
         const resultsContent = resultsArea.querySelector(".results-content");
         const errorMsg = document.getElementById("error-msg");
         const loadingDiv = document.getElementById("loading");
+        
         form.addEventListener("submit", async function (e) {
           e.preventDefault();
           const ip = input.value.trim();
           if (!ip) return;
+          
           errorMsg.style.display = "none";
           loadingDiv.style.display = "block";
           resultsContent.innerHTML = "";
+          
           try {
-            const resp = await fetch(
-              "backend.php?ip=" + encodeURIComponent(ip)
-            );
+            const resp = await fetch(`backend.php?ip=${encodeURIComponent(ip)}`);
             const data = await resp.json();
             loadingDiv.style.display = "none";
-            if (!data.hostname) {
-              resultsContent.innerHTML =
-                "<p>No hostname found for this IP.</p>";
-              return;
+
+            if (data.response.status === 'error') {
+                errorMsg.textContent = data.response.message;
+                errorMsg.style.display = "block";
+                return;
             }
+
+            // Create results table
             const header = document.createElement("div");
             header.className = "results-header";
-            header.textContent = `Reverse DNS results for '${ip}':`;
+            header.textContent = `Reverse DNS lookup for ${data.response.ip}:`;
             resultsContent.appendChild(header);
+
             const table = document.createElement("table");
-            table.innerHTML = "<tr><th>IP Address</th><th>Hostname</th></tr>";
-            const tr = document.createElement("tr");
-            tr.innerHTML = `<td>${ip}</td><td>${data.hostname}</td>`;
-            table.appendChild(tr);
+            table.innerHTML = `
+                <tr>
+                    <th>IP Address</th>
+                    <th>Hostname</th>
+                    <th>Status</th>
+                </tr>
+                <tr>
+                    <td>${data.response.ip}</td>
+                    <td>${data.response.hostname || 'No hostname found'}</td>
+                    <td>${data.response.status}</td>
+                </tr>
+            `;
+            
             resultsContent.appendChild(table);
+            
           } catch (err) {
             loadingDiv.style.display = "none";
             errorMsg.textContent = "An error occurred while fetching results.";
             errorMsg.style.display = "block";
+            console.error(err);
           }
         });
 

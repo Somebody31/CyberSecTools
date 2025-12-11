@@ -3,7 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DNS Propagation Checker</title>
+    <title>DNS Propagation Checker - Check DNS Records Worldwide</title>
+    <meta name="description" content="Check DNS propagation across multiple nameservers worldwide. Supports A, AAAA, MX, NS, TXT, CNAME, and SOA records." />
     <style>
       body {
         font-family: Segoe UI, Arial, sans-serif;
@@ -124,7 +125,16 @@
           placeholder="Enter domain (e.g. example.com)"
           required
         />
-        <button type="submit">Check Propagation</button>
+        <select name="type" required>
+          <option value="A">A Record</option>
+          <option value="AAAA">AAAA Record</option>
+          <option value="MX">MX Record</option>
+          <option value="NS">NS Record</option>
+          <option value="TXT">TXT Record</option>
+          <option value="CNAME">CNAME Record</option>
+          <option value="SOA">SOA Record</option>
+        </select>
+        <button type="submit">Check DNS</button>
       </form>
       <div class="tabs" style="display: none">
         <a href="#" class="tab active">HTML</a>
@@ -148,7 +158,7 @@
         );
       }
       (function () {
-        let currentTab = "html",
+        let currentTab = "html", // HTML by default
           lastQuery = "",
           lastPropagation = [];
         const form = document.querySelector(".search-box"),
@@ -179,77 +189,149 @@
         };
         form.onsubmit = async (e) => {
           e.preventDefault();
-          const query = input.value.trim();
-          if (!query) return;
-          const resp = await fetch(
-            `/dns-propagation/backend.php?domain=${encodeURIComponent(query)}`
-          );
-          const propagation = await resp.json();
-          lastQuery = query;
-          lastPropagation = propagation;
-          tabs.style.display = "flex";
+          const domain = input.value.trim();
+          const type = form.querySelector('select[name="type"]').value;
+          const button = form.querySelector('button');
+          
+          if (!domain) return;
+
+          // Show loading state
+          button.disabled = true;
+          button.textContent = 'Checking...';
+          resultsDiv.innerHTML = '<div style="text-align: center; padding: 20px;">Checking DNS records...</div>';
           resultsDiv.style.display = "block";
-          renderResults(query, propagation);
+          
+          try {
+            const resp = await fetch(
+              `../dns-propagation/backend.php?domain=${encodeURIComponent(domain)}&type=${encodeURIComponent(type)}`
+            );
+            if (!resp.ok) {
+              throw new Error(`HTTP error! status: ${resp.status}`);
+            }
+            const data = await resp.json();
+            
+            lastQuery = domain;
+            lastPropagation = data;
+            tabs.style.display = "flex";
+            renderResults(domain, data);
+          } catch (err) {
+            resultsDiv.innerHTML = `
+              <div class="error-msg">
+                An error occurred while checking DNS records. Please try again.
+              </div>
+            `;
+          } finally {
+            button.disabled = false;
+            button.textContent = 'Check DNS';
+          }
         };
-        function renderResults(query, propagation) {
+        function renderResults(query, data) {
           resultsDiv.innerHTML = "";
           if (!query) return;
+
+          if (data.response.error) {
+            resultsDiv.innerHTML = `
+              <div class="error-msg">
+                ${escapeHtml(data.response.error)}
+              </div>
+            `;
+            return;
+          }
+
           const header = document.createElement("div");
           header.className = "results-header";
-          header.innerHTML = `DNS Propagation for <b>${escapeHtml(query)}</b>`;
+          header.innerHTML = `DNS ${data.query.type} Records for <b>${escapeHtml(query)}</b>`;
           resultsDiv.appendChild(header);
+
           if (currentTab === "json") {
-            const json = {
-              query: { tool: "dns-propagation", domain: query },
-              response: propagation,
-            };
             const pre = document.createElement("pre");
-            pre.textContent = JSON.stringify(json, null, 2);
+            pre.textContent = JSON.stringify(data, null, 2);
             pre.style.background = "#f3f4f6";
             pre.style.padding = "16px";
             pre.style.borderRadius = "8px";
             pre.style.overflow = "auto";
-            pre.style.maxHeight = "420px";
-            pre.style.fontSize = "1rem";
-            pre.style.boxShadow = "none";
-            pre.style.margin = "0";
+            pre.style.maxHeight = "600px";
+            pre.style.fontSize = "0.9rem";
             resultsDiv.appendChild(pre);
-          } else {
-            const table = document.createElement("table");
-            table.innerHTML =
-              "<thead><tr><th>Location</th><th>Nameserver</th><th>Status</th><th>IP</th><th>Last Check</th></tr></thead>";
-            const tbody = document.createElement("tbody");
-            if (Array.isArray(propagation)) {
-              propagation.forEach((row) => {
-                const tr = document.createElement("tr");
-                [
-                  "location",
-                  "nameserver",
-                  "status",
-                  "ip",
-                  "last_check",
-                ].forEach((key) => {
-                  const td = document.createElement("td");
-                  td.textContent = row[key] || "";
-                  tr.appendChild(td);
-                });
-                tbody.appendChild(tr);
-              });
-            }
-            table.appendChild(tbody);
-            resultsDiv.appendChild(table);
+            return;
           }
+
+          const table = document.createElement("table");
+          table.innerHTML = `
+            <thead>
+              <tr>
+                <th>DNS Provider</th>
+                <th>Status</th>
+                <th>Records</th>
+              </tr>
+            </thead>
+          `;
+
+          const tbody = document.createElement("tbody");
+          data.response.results.forEach((result) => {
+            const tr = document.createElement("tr");
+            
+            // DNS Provider column
+            const providerTd = document.createElement("td");
+            providerTd.innerHTML = `
+              <div class="nameserver-info">
+                <span class="nameserver-name">${escapeHtml(result.name)}</span>
+                <span class="nameserver-ip">${escapeHtml(result.nameserver)}</span>
+              </div>
+            `;
+            
+            // Status column
+            const statusTd = document.createElement("td");
+            statusTd.innerHTML = `
+              <span class="status ${result.status}">
+                ${result.status === 'success' ? '✓' : '✗'}
+                ${escapeHtml(result.status)}
+              </span>
+            `;
+            
+            // Records column
+            const recordsTd = document.createElement("td");
+            if (result.records && result.records.length > 0) {
+              recordsTd.innerHTML = result.records
+                .map(record => `<div class="record">${escapeHtml(record)}</div>`)
+                .join("");
+            } else {
+              recordsTd.innerHTML = '<span style="color: #666;">No records found</span>';
+            }
+
+            tr.appendChild(providerTd);
+            tr.appendChild(statusTd);
+            tr.appendChild(recordsTd);
+            tbody.appendChild(tr);
+          });
+
+          table.appendChild(tbody);
+          resultsDiv.appendChild(table);
         }
         renderResults("", []);
       })();
 
-      ["header", "footer"].forEach((id) => {
-        fetch(`../${id}.html`)
-          .then((r) => r.text())
-          .then((html) => {
-            document.getElementById(`${id}-include`).innerHTML = html;
-          });
-      });
+      // Load header and footer with error handling
+      function loadHeaderFooter() {
+        ["header", "footer"].forEach((id) => {
+          fetch(`../${id}.html`)
+            .then((r) => {
+              if (!r.ok) {
+                throw new Error(`HTTP error! status: ${r.status}`);
+              }
+              return r.text();
+            })
+            .then((html) => {
+              document.getElementById(`${id}-include`).innerHTML = html;
+            })
+            .catch((error) => {
+              console.error(`Failed to load ${id}.html:`, error);
+            });
+        });
+      }
+
+      // Initialize header/footer loading
+      loadHeaderFooter();
     </script>
   </body>
 </html>

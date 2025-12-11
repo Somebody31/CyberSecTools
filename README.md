@@ -27,13 +27,11 @@ A comprehensive collection of **25+ cybersecurity and network diagnostic tools**
 | **Abuse Lookup**      | ✅ Active | IP abuse database checking        | < 2s response   |
 | **Spam Database**     | ✅ Active | 10 major blacklist providers      | < 6s response   |
 
-### 🔒 **Firewall & Security Testing** (3 Tools)
+### 🔒 **Security Testing** (1 Tool)
 
-| Tool                      | Status    | Features                    | Performance   |
-| ------------------------- | --------- | --------------------------- | ------------- |
-| **Chinese Firewall Test** | ✅ Active | China accessibility testing | < 5s response |
-| **Iran Firewall Test**    | ✅ Active | Iran accessibility testing  | < 5s response |
-| **Free Email Test**       | ✅ Active | Email provider validation   | < 2s response |
+| Tool                | Status    | Features                  | Performance   |
+| ------------------- | --------- | ------------------------- | ------------- |
+| **Free Email Test** | ✅ Active | Email provider validation | < 2s response |
 
 ### 📍 **IP & Location Tools** (4 Tools)
 

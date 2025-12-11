@@ -161,16 +161,25 @@
           e.preventDefault();
           const query = input.value.trim();
           if (!query) return;
-          const resp = await fetch(
-            `/free-email-test/backend.php?email=${encodeURIComponent(query)}`
-          );
-          const data = await resp.json();
-          const result = "";
-          lastQuery = query;
-          lastResult = result;
-          tabs.style.display = "flex";
-          resultsDiv.style.display = "block";
-          renderResults(query, result);
+          try {
+            const resp = await fetch(
+              `../free-email-test/backend.php?email=${encodeURIComponent(query)}`
+            );
+            if (!resp.ok) {
+              throw new Error(`HTTP error! status: ${resp.status}`);
+            }
+            const data = await resp.json();
+            const result = data.response;
+            lastQuery = query;
+            lastResult = result;
+            tabs.style.display = "flex";
+            resultsDiv.style.display = "block";
+            renderResults(query, result);
+          } catch (error) {
+            resultsDiv.innerHTML = `<p style="text-align: center; color: #e74c3c;">Error fetching email information: ${error.message}</p>`;
+            resultsDiv.style.display = "block";
+            tabs.style.display = "flex";
+          }
         };
         function renderResults(query, result) {
           resultsDiv.innerHTML = "";
@@ -191,20 +200,53 @@
             resultsDiv.appendChild(pre);
           } else {
             const div = document.createElement("div");
-            div.textContent = result;
+            if (result.error) {
+              div.innerHTML = `<div style="color: #dc2626; padding: 12px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; margin: 8px 0;">❌ ${escapeHtml(result.error)}</div>`;
+            } else {
+              const statusColor = result.is_free_email ? '#dc2626' : '#059669';
+              const statusIcon = result.is_free_email ? '❌' : '✅';
+              div.innerHTML = `
+                <div style="padding: 16px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; margin: 8px 0;">
+                  <div style="font-size: 1.1rem; font-weight: 600; color: ${statusColor}; margin-bottom: 8px;">
+                    ${statusIcon} ${escapeHtml(result.message)}
+                  </div>
+                  <div style="color: #6b7280; margin-bottom: 8px;">
+                    <strong>Domain:</strong> ${escapeHtml(result.domain)}<br>
+                    <strong>Provider Type:</strong> ${escapeHtml(result.provider_type)}
+                  </div>
+                  <div style="color: #374151; font-style: italic; padding: 8px; background: #f3f4f6; border-radius: 4px;">
+                    💡 ${escapeHtml(result.recommendation)}
+                  </div>
+                </div>
+              `;
+            }
             resultsDiv.appendChild(div);
           }
         }
         renderResults("", "");
       })();
 
-      ["header", "footer"].forEach((id) => {
-        fetch(`../${id}.html`)
-          .then((r) => r.text())
-          .then((html) => {
-            document.getElementById(`${id}-include`).innerHTML = html;
-          });
-      });
+      // Load header and footer with error handling
+      function loadHeaderFooter() {
+        ["header", "footer"].forEach((id) => {
+          fetch(`../${id}.html`)
+            .then((r) => {
+              if (!r.ok) {
+                throw new Error(`HTTP error! status: ${r.status}`);
+              }
+              return r.text();
+            })
+            .then((html) => {
+              document.getElementById(`${id}-include`).innerHTML = html;
+            })
+            .catch((error) => {
+              console.error(`Failed to load ${id}.html:`, error);
+            });
+        });
+      }
+
+      // Initialize header/footer loading
+      loadHeaderFooter();
     </script>
   </body>
 </html>

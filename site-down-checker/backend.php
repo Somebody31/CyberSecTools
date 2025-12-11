@@ -1,25 +1,16 @@
 <?php
 require_once __DIR__ . '/../db.php';
 require_once __DIR__ . '/../security/SecurityUtils.php';
-require_once __DIR__ . '/../controllers/SiteDownCheckerController.php';
-require_once __DIR__ . '/../views/jsonView.php';
 
 SecurityUtils::setSecurityHeaders();
 
-$rawUrl = isset($_GET['url']) ? trim($_GET['url']) : '';
+require_once __DIR__ . '/../controllers/SiteDownCheckerController.php';
+require_once __DIR__ . '/../views/jsonView.php';
 
-if (!$rawUrl) {
-    $data = ['query' => ['tool' => 'site-down-checker', 'url' => ''], 'response' => ['error' => 'URL parameter is required.']];
-    log_lookup($mysqli, 'site-down-checker', '', 'URL parameter is required.');
-    renderJson($data);
-    exit;
-}
+$url = isset($_GET['url']) ? SecurityUtils::sanitizeInput(trim($_GET['url']), 'url', 255) : '';
 
 $controller = new SiteDownCheckerController($mysqli);
-$data = $controller->handleRequest($rawUrl);
-
-$errorMessage = !empty($data['response']['error']) ? $data['response']['error'] : null;
-log_lookup($mysqli, 'site-down-checker', $rawUrl, $errorMessage);
-
+$data = $controller->handleRequest($url);
+log_lookup($mysqli, 'site-down-checker', $url, !empty($data['response']['error']) ? $data['response']['error'] : null);
 renderJson($data);
 ?>

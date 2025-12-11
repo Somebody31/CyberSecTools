@@ -209,10 +209,10 @@
               domains.forEach((domain) => {
                 const tr = document.createElement("tr");
                 const tdDomain = document.createElement("td");
-                tdDomain.textContent = domain.name || "";
+                tdDomain.textContent = domain.domain || "";
                 tr.appendChild(tdDomain);
                 const tdTitle = document.createElement("td");
-                tdTitle.textContent = domain.title || "";
+                tdTitle.textContent = domain.ip || "";
                 tr.appendChild(tdTitle);
                 tbody.appendChild(tr);
               });

@@ -199,15 +199,24 @@
           e.preventDefault();
           const query = input.value.trim();
           if (!query) return;
-          const resp = await fetch(
-            `/ip-location/backend.php?ip=${encodeURIComponent(query)}`
-          );
-          const location = await resp.json();
-          lastQuery = query;
-          lastLocation = location;
-          tabs.style.display = "flex";
-          resultsDiv.style.display = "block";
-          renderResults(query, location);
+          try {
+            const resp = await fetch(
+              `../ip-location/backend.php?ip=${encodeURIComponent(query)}`
+            );
+            if (!resp.ok) {
+              throw new Error(`HTTP error! status: ${resp.status}`);
+            }
+            const location = await resp.json();
+            lastQuery = query;
+            lastLocation = location;
+            tabs.style.display = "flex";
+            resultsDiv.style.display = "block";
+            renderResults(query, location);
+          } catch (error) {
+            resultsDiv.innerHTML = `<p style="text-align: center; color: #e74c3c;">Error fetching location information: ${error.message}</p>`;
+            resultsDiv.style.display = "block";
+            tabs.style.display = "flex";
+          }
         });
         function renderResults(query, location) {
           resultsDiv.innerHTML = "";
@@ -294,13 +303,27 @@
         renderResults("", {});
       })();
 
-      ["header", "footer"].forEach((id) => {
-        fetch(`../${id}.html`)
-          .then((r) => r.text())
-          .then((html) => {
-            document.getElementById(`${id}-include`).innerHTML = html;
-          });
-      });
+      // Load header and footer with error handling
+      function loadHeaderFooter() {
+        ["header", "footer"].forEach((id) => {
+          fetch(`../${id}.html`)
+            .then((r) => {
+              if (!r.ok) {
+                throw new Error(`HTTP error! status: ${r.status}`);
+              }
+              return r.text();
+            })
+            .then((html) => {
+              document.getElementById(`${id}-include`).innerHTML = html;
+            })
+            .catch((error) => {
+              console.error(`Failed to load ${id}.html:`, error);
+            });
+        });
+      }
+
+      // Initialize header/footer loading
+      loadHeaderFooter();
     </script>
   </body>
 </html>

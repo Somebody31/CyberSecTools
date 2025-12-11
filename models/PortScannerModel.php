@@ -101,5 +101,4 @@ class PortScannerModel {
             'results' => $results
         ];
     }
-}
-?> 
+} 

@@ -87,11 +87,15 @@
         background: #f8fafc;
         padding: 16px;
         border-radius: 8px;
+        border-left: 4px solid #7a0000;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
       }
       .summary-card h3 {
         color: #1f2937;
         font-size: 0.9rem;
         margin: 0 0 8px 0;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
       }
       .summary-card p {
         color: #4b5563;
@@ -99,15 +103,34 @@
         font-size: 1.1rem;
         font-weight: 500;
       }
+      .status-code {
+        font-size: 1.5rem;
+        font-weight: 600;
+      }
+      .status-2xx {
+        color: #059669;
+      }
+      .status-3xx {
+        color: #0284c7;
+      }
+      .status-4xx {
+        color: #ea580c;
+      }
+      .status-5xx {
+        color: #dc2626;
+      }
       table {
         width: 100%;
         border-collapse: collapse;
         margin-top: 8px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        border-radius: 8px;
+        overflow: hidden;
       }
       th,
       td {
         text-align: left;
-        padding: 12px 8px;
+        padding: 12px 16px;
       }
       th {
         background: #f3f4f6;
@@ -124,10 +147,15 @@
       .headers-table .header-name {
         font-family: monospace;
         color: #7a0000;
+        font-weight: 600;
+        width: 30%;
       }
       .headers-table .header-value {
         font-family: monospace;
         word-break: break-all;
+      }
+      .header-key {
+        font-weight: 600;
       }
     </style>
   </head>
@@ -172,7 +200,8 @@
       (function () {
         let currentTab = "html",
           lastQuery = "",
-          lastResult = {};
+          lastResult = {},
+          lastFullData = {};
         const form = document.querySelector(".search-box"),
           input = form.querySelector("input"),
           tabs = document.querySelector(".tabs"),
@@ -189,7 +218,7 @@
           jsonTab.style.borderBottom =
             tab === "json" ? "2px solid #7a0000" : "2px solid transparent";
           jsonTab.style.color = tab === "json" ? "#7a0000" : "#222";
-          renderResults(lastQuery, lastResult);
+          renderResults(lastQuery, lastResult, lastFullData);
         }
         htmlTab.onclick = (e) => {
           e.preventDefault();
@@ -203,24 +232,37 @@
           e.preventDefault();
           const query = input.value.trim();
           if (!query) return;
-          const resp = await fetch(
-            `/http-headers/backend.php?url=${encodeURIComponent(query)}`
-          );
-          const data = await resp.json();
-          const result = {};
+          try {
+            const resp = await fetch(
+              `../http-headers/backend.php?url=${encodeURIComponent(query)}`
+            );
+            if (!resp.ok) {
+              throw new Error(`HTTP error! status: ${resp.status}`);
+            }
+            const data = await resp.json();
+          const result = data.response.headers || {};
           lastQuery = query;
           lastResult = result;
+          lastFullData = data; // Store full data for rendering
           tabs.style.display = "flex";
           resultsDiv.style.display = "block";
-          renderResults(query, result);
+          renderResults(query, result, data);
+        } catch (error) {
+            resultsDiv.innerHTML = `<p style="text-align: center; color: #e74c3c;">Error fetching headers: ${error.message}</p>`;
+            resultsDiv.style.display = "block";
+            tabs.style.display = "flex";
+          }
         };
-        function renderResults(query, result) {
+        function renderResults(query, result, fullData) {
           resultsDiv.innerHTML = "";
           if (!query) return;
+          
+          // Add results header
           const header = document.createElement("div");
           header.className = "results-header";
           header.innerHTML = `HTTP Headers for <b>${escapeHtml(query)}</b>`;
           resultsDiv.appendChild(header);
+          
           if (currentTab === "json") {
             const json = {
               query: { tool: "http-headers", url: query },
@@ -230,6 +272,34 @@
             pre.textContent = JSON.stringify(json, null, 2);
             resultsDiv.appendChild(pre);
           } else {
+            // Create summary section
+            const summaryDiv = document.createElement("div");
+            summaryDiv.className = "summary";
+            
+            // Status code card
+            const statusCode = fullData && fullData.response && fullData.response.summary &&
+              fullData.response.summary['Status Code'] ?
+              fullData.response.summary['Status Code'] : 'Unknown';
+            const statusCodeCard = document.createElement("div");
+            statusCodeCard.className = "summary-card";
+            statusCodeCard.innerHTML = `
+              <h3>Status Code</h3>
+              <p class="status-code ${getStatusClass(statusCode)}">${statusCode}</p>
+            `;
+            summaryDiv.appendChild(statusCodeCard);
+            
+            // URL card
+            const urlCard = document.createElement("div");
+            urlCard.className = "summary-card";
+            urlCard.innerHTML = `
+              <h3>URL</h3>
+              <p>${escapeHtml(query)}</p>
+            `;
+            summaryDiv.appendChild(urlCard);
+            
+            resultsDiv.appendChild(summaryDiv);
+            
+            // Create headers table
             const table = document.createElement("table");
             table.className = "headers-table";
             table.innerHTML =
@@ -240,7 +310,7 @@
                 const tr = document.createElement("tr");
                 const tdName = document.createElement("td");
                 tdName.className = "header-name";
-                tdName.textContent = name;
+                tdName.innerHTML = `<span class="header-key">${escapeHtml(name)}</span>`;
                 const tdValue = document.createElement("td");
                 tdValue.className = "header-value";
                 tdValue.textContent = value;
@@ -249,20 +319,52 @@
                 tbody.appendChild(tr);
               });
             }
+            
+            function getStatusClass(statusCode) {
+              if (typeof statusCode !== 'string') return '';
+              if (statusCode.startsWith('2')) return 'status-2xx';
+              if (statusCode.startsWith('3')) return 'status-3xx';
+              if (statusCode.startsWith('4')) return 'status-4xx';
+              if (statusCode.startsWith('5')) return 'status-5xx';
+              return '';
+            }
             table.appendChild(tbody);
             resultsDiv.appendChild(table);
           }
         }
-        renderResults("", {});
+        
+        function getStatusClass(statusCode) {
+          if (typeof statusCode !== 'string') return '';
+          if (statusCode.startsWith('2')) return 'status-2xx';
+          if (statusCode.startsWith('3')) return 'status-3xx';
+          if (statusCode.startsWith('4')) return 'status-4xx';
+          if (statusCode.startsWith('5')) return 'status-5xx';
+          return '';
+        }
+        renderResults("", {}, {});
       })();
 
-      ["header", "footer"].forEach((id) => {
-        fetch(`../${id}.html`)
-          .then((r) => r.text())
-          .then((html) => {
-            document.getElementById(`${id}-include`).innerHTML = html;
-          });
-      });
+      // Load header and footer with error handling
+      function loadHeaderFooter() {
+        ["header", "footer"].forEach((id) => {
+          fetch(`../${id}.html`)
+            .then((r) => {
+              if (!r.ok) {
+                throw new Error(`HTTP error! status: ${r.status}`);
+              }
+              return r.text();
+            })
+            .then((html) => {
+              document.getElementById(`${id}-include`).innerHTML = html;
+            })
+            .catch((error) => {
+              console.error(`Failed to load ${id}.html:`, error);
+            });
+        });
+      }
+
+      // Initialize header/footer loading
+      loadHeaderFooter();
     </script>
   </body>
 </html>

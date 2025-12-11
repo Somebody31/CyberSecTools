@@ -1,0 +1,195 @@
+=== PHP MVC Tools Testing Started ===
+Testing 24 tools
+
+[INFO] Tool abuse-lookup: started
+[PASS] File structure check
+[PASS] Backend functionality test
+[PASS] Frontend structure test
+[PASS] API endpoint test
+[INFO] Tool abuse-lookup: finished
+
+[INFO] Tool asn-lookup: started
+[PASS] File structure check
+[PASS] Backend functionality test
+[PASS] Frontend structure test
+[FAIL] API endpoint test - Backend was missing renderJson call, now fixed but external RDAP APIs may not be accessible, resulting in empty data responses
+[INFO] Tool asn-lookup: finished
+
+[INFO] Tool dns-lookup: started
+[PASS] File structure check
+[PASS] Backend functionality test
+[PASS] Frontend structure test
+[PASS] API endpoint test
+[INFO] Tool dns-lookup: finished
+
+[INFO] Tool dns-propagation: started
+[PASS] File structure check
+[PASS] Backend functionality test
+[PASS] Frontend structure test
+[PASS] API endpoint test
+[INFO] Tool dns-propagation: finished
+
+[INFO] Tool dns-report: started
+[PASS] File structure check
+[PASS] Backend functionality test
+[PASS] Frontend structure test
+[PASS] API endpoint test
+[INFO] Tool dns-report: finished
+
+[INFO] Tool dnssec-test: started
+[PASS] File structure check
+[PASS] Backend functionality test
+[PASS] Frontend structure test
+[PASS] API endpoint test
+[INFO] Tool dnssec-test: finished
+
+[INFO] Tool free-email-test: started
+[PASS] File structure check
+[PASS] Backend functionality test
+[PASS] Frontend structure test
+[PASS] API endpoint test
+[INFO] Tool free-email-test: finished
+
+[INFO] Tool global-ping: started
+[PASS] File structure check
+[PASS] Backend functionality test
+[PASS] Frontend structure test
+[PASS] API endpoint test
+[INFO] Tool global-ping: finished
+
+[INFO] Tool http-headers: started
+[PASS] File structure check
+[PASS] Backend functionality test
+[PASS] Frontend structure test
+[PASS] API endpoint test
+[INFO] Tool http-headers: finished
+
+[INFO] Tool ip-history: started
+[PASS] File structure check
+[PASS] Backend functionality test
+[PASS] Frontend structure test
+[PASS] API endpoint test
+[INFO] Tool ip-history: finished
+
+[INFO] Tool ip-location: started
+[PASS] File structure check
+[PASS] Backend functionality test
+[PASS] Frontend structure test
+[PASS] API endpoint test
+[INFO] Tool ip-location: finished
+
+[INFO] Tool mac-lookup: started
+[PASS] File structure check
+[PASS] Backend functionality test
+[PASS] Frontend structure test
+[PASS] API endpoint test
+[INFO] Tool mac-lookup: finished
+
+[INFO] Tool nameserver-sites: started
+[PASS] File structure check
+[PASS] Backend functionality test
+[PASS] Frontend structure test
+[PASS] API endpoint test
+[INFO] Tool nameserver-sites: finished
+
+[INFO] Tool port-scanner: started
+[PASS] File structure check
+[PASS] Backend functionality test
+[PASS] Frontend structure test
+[PASS] API endpoint test
+[INFO] Tool port-scanner: finished
+
+[INFO] Tool reverse-dns: started
+[PASS] File structure check
+[PASS] Backend functionality test
+[PASS] Frontend structure test
+[PASS] API endpoint test
+[INFO] Tool reverse-dns: finished
+
+[INFO] Tool reverse-ip-lookup: started
+[PASS] File structure check
+[PASS] Backend functionality test
+[PASS] Frontend structure test
+[PASS] API endpoint test
+[INFO] Tool reverse-ip-lookup: finished
+
+[INFO] Tool reverse-mx-lookup: started
+[PASS] File structure check
+[PASS] Backend functionality test
+[PASS] Frontend structure test
+[PASS] API endpoint test
+[INFO] Tool reverse-mx-lookup: finished
+
+[INFO] Tool reverse-ns-lookup: started
+[PASS] File structure check
+[PASS] Backend functionality test
+[PASS] Frontend structure test
+[PASS] API endpoint test
+[INFO] Tool reverse-ns-lookup: finished
+
+[INFO] Tool reverse-whois-lookup: started
+[PASS] File structure check
+[PASS] Backend functionality test
+[PASS] Frontend structure test
+[PASS] API endpoint test
+[INFO] Tool reverse-whois-lookup: finished
+
+[INFO] Tool site-down-checker: started
+[PASS] File structure check
+[PASS] Backend functionality test
+[PASS] Frontend structure test
+[PASS] API endpoint test
+[INFO] Tool site-down-checker: finished
+
+[INFO] Tool spam-database: started
+[PASS] File structure check
+[PASS] Backend functionality test
+[PASS] Frontend structure test
+[PASS] API endpoint test
+[INFO] Tool spam-database: finished
+
+[INFO] Tool traceroute: started
+[PASS] File structure check
+[PASS] Backend functionality test
+[PASS] Frontend structure test
+[PASS] API endpoint test
+[INFO] Tool traceroute: finished
+
+[INFO] Tool url-decode: started
+[PASS] File structure check
+[PASS] Backend functionality test
+[FAIL] Frontend-backend integration - Frontend uses client-side JavaScript decoding, never calls backend.php API
+[INFO] Tool url-decode: finished
+
+[INFO] Tool whois-lookup: started
+[PASS] File structure check
+[PASS] Backend functionality test
+[PASS] Frontend structure test
+[PASS] API endpoint test
+[INFO] Tool whois-lookup: finished
+
+=== TESTING SUMMARY ===
+Total tools tested: 24
+Tools passed: 22
+Tools failed: 2
+Tools skipped/incomplete: 0
+
+Success rate: 91.7%
+
+=== DETAILED ANALYSIS ===
+
+FAILED TOOLS ANALYSIS:
+1. asn-lookup: Backend was missing renderJson call which has been fixed, but the tool relies on external RDAP APIs that may not be accessible, resulting in empty data responses.
+2. url-decode: Frontend implements client-side URL decoding using JavaScript's decodeURIComponent() function and never makes API calls to backend.php. While both frontend and backend exist and are functional independently, they are not integrated. The frontend works as a standalone client-side tool, while the backend API remains underutilized.
+
+DISPLAY ISSUES:
+Several tools may have display issues in the frontend even though their backend APIs work correctly. This could be due to:
+- Issues with header/footer inclusion
+- CSS styling conflicts
+- JavaScript errors in the frontend code
+- Missing dependencies for proper rendering
+
+API FUNCTIONALITY:
+All tools with properly configured backends are returning correct JSON responses. The backend functionality is working as expected for tools that have been fixed.
+
+=== Testing Completed ===

@@ -354,19 +354,41 @@
           errorMsg.style.display = "none";
           loadingDiv.style.display = "block";
           resultsSection.style.display = "block";
+          
+          // Ensure correct view is visible before clearing content
+          const activeTab = document.querySelector('.format-tab.active');
+          if (activeTab && activeTab.dataset.format === 'html') {
+              htmlView.style.display = "block";
+              jsonView.style.display = "none";
+          } else {
+              htmlView.style.display = "none";
+              jsonView.style.display = "block";
+          }
+          
           htmlView.innerHTML = "";
           jsonView.innerHTML = "";
+          // Ensure the HTML view is visible when the HTML tab is active
+          if (document.querySelector('.format-tab.active').dataset.format === 'html') {
+              htmlView.style.display = "block";
+              jsonView.style.display = "none";
+          } else {
+              htmlView.style.display = "none";
+              jsonView.style.display = "block";
+          }
 
           try {
             const resp = await fetch(
-              "backend.php?domain=" + encodeURIComponent(domain)
+              "../dns-report/backend.php?domain=" + encodeURIComponent(domain)
             );
+            if (!resp.ok) {
+              throw new Error(`HTTP error! status: ${resp.status}`);
+            }
             const data = await resp.json();
             currentData = data;
 
             loadingDiv.style.display = "none";
 
-            if (!data.records || data.records.length === 0) {
+            if (!data.response || !data.response.records || data.response.records.length === 0) {
               resultsTitle.textContent = `DNS Report for '${domain}'`;
               htmlView.innerHTML = "<p>No DNS records found.</p>";
               jsonView.textContent = JSON.stringify(data, null, 2);
@@ -378,7 +400,7 @@
             const reportDiv = document.createElement("div");
             reportDiv.innerHTML = `
               <h3>DNS Records Summary</h3>
-              <p>Found ${data.records.length} DNS records for ${domain}</p>
+              <p>Found ${data.response.records.length} DNS records for ${domain}</p>
               <table>
                 <tr>
                   <th>RECORD NAME</th>
@@ -392,7 +414,7 @@
             `;
 
             const table = reportDiv.querySelector("table");
-            data.records.forEach((record) => {
+            data.response.records.forEach((record) => {
               const tr = document.createElement("tr");
               tr.innerHTML = `
                 <td>${record.name || ""}</td>
@@ -400,28 +422,53 @@
                 <td>IN</td>
                 <td>${record.type || ""}</td>
                 <td>${record.priority || ""}</td>
-                <td>${record.value || ""}</td>
+                <td>${record.data || record.value || ""}</td>
               `;
               table.appendChild(tr);
             });
 
+            // Clear and append the new content
+            htmlView.innerHTML = '';
             htmlView.appendChild(reportDiv);
             jsonView.textContent = JSON.stringify(data, null, 2);
+            // Ensure the correct view is displayed based on active tab
+            const activeTab = document.querySelector('.format-tab.active');
+            if (activeTab && activeTab.dataset.format === 'html') {
+                htmlView.style.display = 'block';
+                jsonView.style.display = 'none';
+            } else {
+                htmlView.style.display = 'none';
+                jsonView.style.display = 'block';
+            }
           } catch (err) {
             loadingDiv.style.display = "none";
             errorMsg.textContent =
-              "An error occurred while generating the report.";
+              "An error occurred while generating the report: " + err.message;
             errorMsg.style.display = "block";
           }
         });
 
-        ["header", "footer"].forEach((id) => {
-          fetch(`../${id}.html`)
-            .then((r) => r.text())
-            .then((html) => {
-              document.getElementById(`${id}-include`).innerHTML = html;
-            });
-        });
+        // Load header and footer with error handling
+        function loadHeaderFooter() {
+          ["header", "footer"].forEach((id) => {
+            fetch(`../${id}.html`)
+              .then((r) => {
+                if (!r.ok) {
+                  throw new Error(`HTTP error! status: ${r.status}`);
+                }
+                return r.text();
+              })
+              .then((html) => {
+                document.getElementById(`${id}-include`).innerHTML = html;
+              })
+              .catch((error) => {
+                console.error(`Failed to load ${id}.html:`, error);
+              });
+          });
+        }
+
+        // Initialize header/footer loading
+        loadHeaderFooter();
       })();
     </script>
   </body>

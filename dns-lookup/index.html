@@ -208,6 +208,17 @@
           required
           aria-label="Domain"
         />
+        <select id="recordType" aria-label="Record Type">
+          <option value="A">A</option>
+          <option value="AAAA">AAAA</option>
+          <option value="CNAME">CNAME</option>
+          <option value="MX">MX</option>
+          <option value="NS">NS</option>
+          <option value="PTR">PTR</option>
+          <option value="SOA">SOA</option>
+          <option value="SRV">SRV</option>
+          <option value="TXT">TXT</option>
+        </select>
         <button type="submit">Lookup</button>
       </form>
 
@@ -326,6 +337,7 @@
           const format = activeTab.dataset.format;
           let content = "";
           let filename = `dns-records-${input.value.trim()}.${format}`;
+          const type = document.getElementById("recordType").value;
 
           if (format === "html") {
             content = htmlView.innerHTML;
@@ -349,6 +361,7 @@
         form.addEventListener("submit", async function (e) {
           e.preventDefault();
           const domain = input.value.trim();
+          const type = document.getElementById("recordType").value;
           if (!domain) return;
 
           errorMsg.style.display = "none";
@@ -358,15 +371,22 @@
           jsonView.innerHTML = "";
 
           try {
+            const type = document.getElementById("recordType").value;
             const resp = await fetch(
-              "backend.php?domain=" + encodeURIComponent(domain)
+              "../dns-lookup/backend.php?domain=" + encodeURIComponent(domain) + "&type=" + type
             );
+            if (!resp.ok) {
+              throw new Error(`HTTP error! status: ${resp.status}`);
+            }
             const data = await resp.json();
             currentData = data;
 
             loadingDiv.style.display = "none";
 
-            if (!data.records || data.records.length === 0) {
+            // Extract records from the response structure
+            const records = data.response?.records || [];
+
+            if (records.length === 0) {
               resultsTitle.textContent = `DNS Records for '${domain}'`;
               htmlView.innerHTML = "<p>No results found.</p>";
               jsonView.textContent = JSON.stringify(data, null, 2);
@@ -387,7 +407,7 @@
               </tr>
             `;
 
-            data.records.forEach((record) => {
+            records.forEach((record) => {
               const tr = document.createElement("tr");
               tr.innerHTML = `
                 <td>${record.name || ""}</td>
@@ -395,7 +415,7 @@
                 <td>IN</td>
                 <td>${record.type || ""}</td>
                 <td>${record.priority || ""}</td>
-                <td>${record.value || ""}</td>
+                <td>${record.data || ""}</td>
               `;
               table.appendChild(tr);
             });
@@ -409,13 +429,27 @@
           }
         });
 
-        ["header", "footer"].forEach((id) => {
-          fetch(`../${id}.html`)
-            .then((r) => r.text())
-            .then((html) => {
-              document.getElementById(`${id}-include`).innerHTML = html;
-            });
-        });
+        // Load header and footer with error handling
+        function loadHeaderFooter() {
+          ["header", "footer"].forEach((id) => {
+            fetch(`../${id}.html`)
+              .then((r) => {
+                if (!r.ok) {
+                  throw new Error(`HTTP error! status: ${r.status}`);
+                }
+                return r.text();
+              })
+              .then((html) => {
+                document.getElementById(`${id}-include`).innerHTML = html;
+              })
+              .catch((error) => {
+                console.error(`Failed to load ${id}.html:`, error);
+              });
+          });
+        }
+
+        // Initialize header/footer loading
+        loadHeaderFooter();
       })();
     </script>
   </body>

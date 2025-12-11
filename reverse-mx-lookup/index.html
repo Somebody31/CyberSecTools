@@ -172,7 +172,13 @@
           "
         >
           <div class="tab-btns">
-            <span title="Copy">📋</span><span title="Download">⬇️</span>
+            <a
+              id="csvDownload"
+              title="Download CSV"
+              href="#"
+              style="text-decoration: none"
+              >⬇️</a
+            >
           </div>
           <div class="results-content"></div>
         </div>
@@ -307,6 +313,14 @@
           jsonTab.classList.add("active");
           htmlTab.classList.remove("active");
           if (lastResult) renderResults(lastResult);
+        });
+        const csvBtn = document.getElementById("csvDownload");
+        csvBtn.addEventListener("click", function (e) {
+          e.preventDefault();
+          if (!lastQuery || !lastResult || !lastResult.showResults) return;
+          window.location.href = `backend.php?mx=${encodeURIComponent(
+            lastQuery
+          )}&download=csv`;
         });
         form.addEventListener("submit", function (e) {
           e.preventDefault();
